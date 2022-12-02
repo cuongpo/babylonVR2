@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>Babylon.js sample code</title>
+    <!-- Babylon.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/dat-gui/0.6.2/dat.gui.min.js"></script>
+    <script src="https://assets.babylonjs.com/generated/Assets.js"></script>
+    <script src="https://preview.babylonjs.com/ammo.js"></script>
+    <script src="https://preview.babylonjs.com/cannon.js"></script>
+    <script src="https://preview.babylonjs.com/Oimo.js"></script>
+    <script src="https://preview.babylonjs.com/earcut.min.js"></script>
+    <script src="https://preview.babylonjs.com/babylon.js"></script>
+    <script src="https://preview.babylonjs.com/materialsLibrary/babylonjs.materials.min.js"></script>
+    <script src="https://preview.babylonjs.com/proceduralTexturesLibrary/babylonjs.proceduralTextures.min.js"></script>
+    <script src="https://preview.babylonjs.com/postProcessesLibrary/babylonjs.postProcess.min.js"></script>
+    <script src="https://preview.babylonjs.com/loaders/babylonjs.loaders.js"></script>
+    <script src="https://preview.babylonjs.com/serializers/babylonjs.serializers.min.js"></script>
+    <script src="https://preview.babylonjs.com/gui/babylon.gui.min.js"></script>
+    <script src="https://preview.babylonjs.com/inspector/babylon.inspector.bundle.js"></script>
+    <style>
+      html,
+      body {
+        overflow: hidden;
+        width: 100%;
+        height: 100%;
+        margin: 0;
+        padding: 0;
+      }
+
+      #renderCanvas {
+        width: 100%;
+        height: 100%;
+        touch-action: none;
+      }
+
+      .modal {
+        position: fixed;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0.5);
+        opacity: 0;
+        visibility: hidden;
+        transform: scaleX(1.1) scaleY(1.1);
+        transition: visibility 0s linear 0.25s, opacity 0.25s 0s, transform 0.25s;
+        font-family: sans-serif;
+      }
+
+      .modal-content {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        background-color: white;
+        padding: 1rem 1.5rem;
+        width: 60%;
+        height: 60%;
+        border-radius: 0.5rem;
+        z-index: 99000 !important;
+
+      }
+
+      .close-button {
+        float: right;
+        width: 1.5rem;
+        line-height: 1.5rem;
+        text-align: center;
+        cursor: pointer;
+        border-radius: 0.25rem;
+        background-color: lightgray;
+      }
+
+      .close-button:hover {
+        background-color: darkgray;
+      }
+
+      .show-modal {
+        opacity: 1;
+        visibility: visible;
+        transform: scaleX(1.0) scaleY(1.0);
+        transition: visibility 0s linear 0s, opacity 0.25s 0s, transform 0.25s;
+      }
+
+
+    </style>
+  </head>
+  <body>
+    <button class="trigger" style="margin: 4px;">Click here to trigger the modal without any relation to Babylon scene or click box or sphere below and see what will happen :)</button>
+    <div class="modal">
+        
+      <div class="modal-content">
+        <iframe src="https://divega.com/" width=100% height=100%></iframe>
+      </div>
+    </div>
+    <canvas id="renderCanvas"></canvas>
+    <script>
+      var modal = document.querySelector(".modal");
+      var trigger = document.querySelector(".trigger");
+      
+
+      function toggleModal() {
+        modal.classList.toggle("show-modal");
+        var closeButton = document.querySelector(".close-button");
+        // closeButton.addEventListener("click", console.log("ABC"));
+      }
+      function windowOnClick(event) {
+          if (event.target === modal) {
+              toggleModal();
+          }
+      };
+      window.addEventListener("click", windowOnClick);
+      
+
+    </script>
+    <script>
+      var canvas = document.getElementById("renderCanvas");
+      var startRenderLoop = function(engine, canvas) {
+        engine.runRenderLoop(function() {
+          if (sceneToRender && sceneToRender.activeCamera) {
+            sceneToRender.render();
+          }
+        });
+      }
+      var engine = null;
+      var scene = null;
+      var sceneToRender = null;
+      var createDefaultEngine = function() {
+        return new BABYLON.Engine(canvas, true, {
+          preserveDrawingBuffer: true,
+          stencil: true,
+          disableWebGL2Support: false
+        });
+      };
+      var createScene = async function() {
+        // This creates a basic Babylon Scene object (non-mesh)
+        var scene = new BABYLON.Scene(engine);
+        // const resultPromise = BABYLON.SceneLoader.ImportMeshAsync("", "https://raw.githubusercontent.com/cuongpo/babylon/main/", "mtw-1k.glb", scene);
+        // resultPromise.then((result) => {
+        //    result.meshes[0].scaling = new BABYLON.Vector3(0.4, 0.4, 0.4);
+        // })
+        BABYLON.SceneLoader.ImportMesh("", "https://raw.githubusercontent.com/cuongpo/babylon/main/", "mtw-1k-2.glb", scene, async function(newMeshes) {
+          var xr = await scene.createDefaultXRExperienceAsync({
+            floorMeshes: [scene.getMeshByName("MetawayHolding_Floor")]
+          });
+          xr.baseExperience.sessionManager.onXRFrameObservable.addOnce(() => {
+            // set the height at the first frame
+            xr.baseExperience.camera.position.y += 4.5;
+          })
+          xr.baseExperience.sessionManager.onXRFrameObservable.add(() => {
+            xr.baseExperience.camera.position.y = 4.5;
+          })
+        });
+        // This creates and positions a free camera (non-mesh)
+        var camera = new BABYLON.FreeCamera("camera1", new BABYLON.Vector3(0, 5, -10), scene);
+        // This targets the camera to scene origin
+        camera.setTarget(new BABYLON.Vector3(0, 3, 0));
+        // This attaches the camera to the canvas
+        camera.attachControl(canvas, true);
+        // This creates a light, aiming 0,1,0 - to the sky (non-mesh)
+        var light = new BABYLON.HemisphericLight("light", new BABYLON.Vector3(0, 1, 0), scene);
+        // Default intensity is 1. Let's dim the light a small amount
+        light.intensity = 0.7;
+        const environment = scene.createDefaultEnvironment({
+          createSkybox: false
+        });
+        // Add sky box
+        var skybox = BABYLON.MeshBuilder.CreateBox("skyBox", {
+          size: 1000.0
+        }, scene);
+        var skyboxMaterial = new BABYLON.StandardMaterial("skyBox", scene);
+        skyboxMaterial.backFaceCulling = false;
+        skyboxMaterial.reflectionTexture = new BABYLON.CubeTexture("textures/skybox", scene);
+        skyboxMaterial.reflectionTexture.coordinatesMode = BABYLON.Texture.SKYBOX_MODE;
+        skyboxMaterial.diffuseColor = new BABYLON.Color3(0, 0, 0);
+        skyboxMaterial.specularColor = new BABYLON.Color3(0, 0, 0);
+        skybox.material = skyboxMaterial;
+        // video main
+        var planeOpts = {
+          height: 5.4762,
+          width: 7.3967,
+          sideOrientation: BABYLON.Mesh.DOUBLESIDE
+        };
+        var ANote0Video = BABYLON.MeshBuilder.CreatePlane("plane", planeOpts, scene);
+        var vidPos = (new BABYLON.Vector3(-17.6, 5, -0.6))
+        var vidRotation = new BABYLON.Vector3(0, -Math.PI / 2, 0);
+        ANote0Video.position = vidPos;
+        ANote0Video.rotation = vidRotation;
+        ANote0Video.scaling = new BABYLON.Vector3(0.8, 0.8, 0.8);
+        var ANote0VideoMat = new BABYLON.StandardMaterial("m", scene);
+        var ANote0VideoVidTex = new BABYLON.VideoTexture("vidtex", "https://raw.githubusercontent.com/cuongpo/babylon/main/video-tech.mp4", scene);
+        ANote0VideoMat.diffuseTexture = ANote0VideoVidTex;
+        ANote0VideoMat.roughness = 1;
+        ANote0VideoMat.emissiveColor = new BABYLON.Color3.White();
+        ANote0Video.material = ANote0VideoMat;
+        scene.onPointerObservable.add(function(evt) {
+          if (evt.pickInfo.pickedMesh === ANote0Video) {
+            //console.log("picked");
+            if (ANote0VideoVidTex.video.paused) ANote0VideoVidTex.video.play();
+            else ANote0VideoVidTex.video.pause();
+            console.log(ANote0VideoVidTex.video.paused ? "paused" : "playing");
+          }
+        }, BABYLON.PointerEventTypes.POINTERPICK);
+        //console.log(ANote0Video);
+        var sphere = BABYLON.Mesh.CreateSphere("sphere1", 100, 0.2, scene);
+        sphere.position.x = 2;
+        sphere.actionManager = new BABYLON.ActionManager(scene);
+        sphere.actionManager.registerAction(new BABYLON.ExecuteCodeAction(BABYLON.ActionManager.OnPickUpTrigger, function() {
+          toggleModal();
+        }));
+
+        const image = new BABYLON.StandardMaterial("test");
+        image.diffuseTexture = new BABYLON.Texture("./textures/divega.jpg");
+
+        const playerPicture = BABYLON.MeshBuilder.CreatePlane("playerPicture", {height: 12, width: 16});
+        playerPicture.material = image;
+        playerPicture.position.y = 5;
+        playerPicture.position.x = -10;
+        playerPicture.position.z = 7.8;
+        playerPicture.scaling = new BABYLON.Vector3(0.3, 0.3, 0.3);
+        playerPicture.rotation.y = BABYLON.Tools.ToRadians(0);
+        playerPicture.actionManager = new BABYLON.ActionManager(scene);
+        playerPicture.actionManager.registerAction(new BABYLON.ExecuteCodeAction(BABYLON.ActionManager.OnPickUpTrigger, function() {
+          toggleModal();
+        }));
+
+
+        return scene;
+      };
+      window.initFunction = async function() {
+        var asyncEngineCreation = async function() {
+          try {
+            return createDefaultEngine();
+          } catch (e) {
+            console.log("the available createEngine function failed. Creating the default engine instead");
+            return createDefaultEngine();
+          }
+        }
+        window.engine = await asyncEngineCreation();
+        if (!engine) throw 'engine should not be null.';
+        startRenderLoop(engine, canvas);
+        window.scene = createScene();
+      };
+      initFunction().then(() => {
+        scene.then(returnedScene => {
+          sceneToRender = returnedScene;
+        });
+      });
+      // Resize
+      window.addEventListener("resize", function() {
+        engine.resize();
+      });
+    </script>
+  </body>
+</html>
