@@ -220,10 +220,11 @@
         playerPicture.position.z = 7.8;
         playerPicture.scaling = new BABYLON.Vector3(0.3, 0.3, 0.3);
         playerPicture.rotation.y = BABYLON.Tools.ToRadians(0);
-        playerPicture.actionManager = new BABYLON.ActionManager(scene);
-        playerPicture.actionManager.registerAction(new BABYLON.ExecuteCodeAction(BABYLON.ActionManager.OnPickUpTrigger, function() {
-          toggleModal();
-        }));
+        scene.onPointerObservable.add(function(evt){
+              if(evt.pickInfo.pickedMesh === playerPicture){
+                    toggleModal();
+              }
+          }, BABYLON.PointerEventTypes.POINTERPICK);
 
 
         return scene;
